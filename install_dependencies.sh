@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -x
-set -eu
 
 start_dir=$(pwd)
 ROARY_LIB_DIR="${start_dir}/lib"

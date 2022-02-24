@@ -61,32 +61,31 @@ sub run {
     my $output_mcl_filename           = '_uninflated_mcl_groups';
     my $output_filtered_clustered_fasta  = '_clustered_filtered.fa';
     my $cdhit_groups = $output_combined_filename.'.groups';
-    
-    
+
     unlink($cdhit_groups) unless($self->dont_delete_files == 1);
 
-	print "Combine proteins into a single file\n" if($self->verbose);
+    print "Combine proteins into a single file\n" if($self->verbose);
     my $combine_fasta_files = Bio::Roary::CombinedProteome->new(
         proteome_files  => $self->fasta_files,
         output_filename => $output_combined_filename,
-    );
+        );
     $combine_fasta_files->create_combined_proteome_file;
 
     my $number_of_input_files = @{$self->input_files};
 
-	print "Iteratively run cd-hit\n" if($self->verbose);
+    print "Iteratively run cd-hit\n" if($self->verbose);
     my $iterative_cdhit= Bio::Roary::External::IterativeCdhit->new(
-      output_cd_hit_filename           => $output_cd_hit_filename,
-      output_combined_filename         => $output_combined_filename,
-      number_of_input_files            => $number_of_input_files, 
-      output_filtered_clustered_fasta  => $output_filtered_clustered_fasta,
-      job_runner                       => $self->job_runner,
-      cpus                             => $self->cpus
-    );
-    
+        output_cd_hit_filename           => $output_cd_hit_filename,
+        output_combined_filename         => $output_combined_filename,
+        number_of_input_files            => $number_of_input_files,
+        output_filtered_clustered_fasta  => $output_filtered_clustered_fasta,
+        job_runner                       => $self->job_runner,
+        cpus                             => $self->cpus
+        );
+
     $iterative_cdhit->run();
 
-	print "Parallel all against all blast\n" if($self->verbose);
+    print "Parallel all against all blast\n" if($self->verbose);
     my $blast_obj = Bio::Roary::ParallelAllAgainstAllBlast->new(
         fasta_file              => $output_cd_hit_filename,
         blast_results_file_name => $output_blast_results_filename,
@@ -95,28 +94,28 @@ sub run {
         makeblastdb_exec        => $self->makeblastdb_exec,
         blastp_exec             => $self->blastp_exec,
         perc_identity           => $self->perc_identity
-    );
+        );
     $blast_obj->run();
-    
+
     my $blast_identity_frequency_obj = Bio::Roary::Output::BlastIdentityFrequency->new(
         input_filename      => $output_blast_results_filename,
-      );
+        );
     $blast_identity_frequency_obj->create_file();
 
-	print "Cluster with MCL\n" if($self->verbose);
+    print "Cluster with MCL\n" if($self->verbose);
     my $mcl = Bio::Roary::External::Mcl->new(
         blast_results   => $output_blast_results_filename,
         mcxdeblast_exec => $self->mcxdeblast_exec,
         mcl_exec        => $self->mcl_exec,
         job_runner      => $self->job_runner,
         cpus            => $self->cpus,
-	inflation_value => $self->inflation_value,
+        inflation_value => $self->inflation_value,
         output_file     => $output_mcl_filename
-    );
+        );
     $mcl->run();
 
     unlink($output_blast_results_filename) unless($self->dont_delete_files == 1);
-    
+
     my $post_analysis = Bio::Roary::External::PostAnalysis->new(
         job_runner                  => 'Local',
         cpus                        => $self->cpus,
@@ -135,14 +134,12 @@ sub run {
         translation_table           => $self->translation_table,
         group_limit                 => $self->group_limit,
         core_definition             => $self->core_definition,
-		verbose                     => $self->verbose,
-		mafft                       => $self->mafft,
-		allow_paralogs              => $self->allow_paralogs,
-    );
+        verbose                     => $self->verbose,
+        mafft                       => $self->mafft,
+        allow_paralogs              => $self->allow_paralogs,
+        );
     $post_analysis->run();
-
 }
-
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
